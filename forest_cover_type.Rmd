@@ -1,0 +1,140 @@
+---
+title: "forest_cover_type"
+author: "Ada Kiekhaefer"
+date: "3/18/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Classification of forest cover type
+##Introduction
+The actual forest cover type for a given observation (30 x 30 meter cell) was determined from US Forest Service (USFS) Region 2 Resource Information System (RIS) data. The study area included four wilderness areas found in the Roosevelt National Forest of northern Colorado. 
+Some background information for these four wilderness areas:  
+	Neota (area 2) probably has the highest mean elevational value of 
+	the 4 wilderness areas. Rawah (area 1) and Comanche Peak (area 3) 
+	would have a lower mean elevational value, while Cache la Poudre 
+	(area 4) would have the lowest mean elevational value. 
+As for primary major tree species in these areas, Neota would have 
+	spruce/fir (type 1), while Rawah and Comanche Peak would probably
+	have lodgepole pine (type 2) as their primary species, followed by 
+	spruce/fir and aspen (type 5). Cache la Poudre would tend to have 
+	Ponderosa pine (type 3), Douglas-fir (type 6), and 
+	cottonwood/willow (type 4).
+
+### List of variables
+
+## Exploratory Data Analysis
+###Loading r libraries 
+``` {r load_library}
+#Loading r libraries
+library(dplyr)
+library(readr)
+```
+
+### Loading data
+* The data file was in csv format. I used read_csv function from readr package to load it into R. 
+* Unfortuanely, none of the columns were labeled. 
+
+```{r read_data}
+#importing data
+df_raw <- read_csv('./data/covtype.data', col_names=FALSE)
+#Looking at the first few rows of the data
+df_raw %>% head()
+```
+
+### Added column names
+Added column names based on the information in covtype.info. 
+
+``` {r add_column_names}
+temp_name <- c('Elevation', 'Aspect', 'Slope', 'Horizontal_Distance_To_Hydrology', 'Vertical_Distance_To_Hydrology', 
+             'Horizontal_Distance_To_Roadways', 'Hillshade_9am', 'Hillshade_Noon', 'Hillshade_3pm',
+             'Horizontal_Distance_To_Fire_Points', 'Wilderness_Area1', 'Wilderness_Area2', 'Wilderness_Area3',
+             'Wilderness_Area4')
+
+# create soil column names
+num <-1:40
+soil_name <- paste('Soil_Type', num, sep='')
+col_names <- c(temp_name, soil_name, 'Cover_Type')
+
+# add column names to the dataframe
+df <- df_raw
+colnames(df) <- col_names
+```
+### Checked data structures
+* There are 581,012 observations and 55 variables in the dataset including the response variable. 
+* Values in columns are all numeric.  
+* Some features should be categorical (wilderness area, soil type)
+* Wilderness_Area variable was recorded as 4 binary variables
+* Soil_Type variable was recorded as 40 binary variables 
+
+``` {r check_data}
+df_raw %>% glimpse()
+```
+
+### Check if there is any missing value
+* No missing value in this dataset. 
+```{r check_NA}
+any(is.na(df))
+```
+
+
+
+## 1. Describe the dataset and any interesting variables (feel free to include response).
+Hint: It may be useful to provide a high-level summary (i.e. descriptive statistics) on the variables
+
+* Features with different scales:  
+* Elevation: all cover types are at quite high elevation with minimum elevation at 1859 meters. 
+* Slope: range of slope is quite large with minimum 0 and maximum 66 degree (high slope, mountainous areas)
+* Wilderness_Area: mostly in wilderness area 1 (mean 0.4489) and 3 (mean 0.4361)
+* Cover_Type: the response variable has type 1 with the ratio of 0.365 and and type 2 with the ratio of 0.488 (see code below)
+
+``` {r summary_statistics}
+#summary statistics of all features
+summary(df)
+
+# standard deviations of numerical features
+sd_numeric <- df %>% 
+  select(Elevation:Horizontal_Distance_To_Fire_Points) %>%
+  summarise_each(funs(sd))
+print(sd_numeric)
+
+#ratio of Cover_Type
+df %>% 
+  group_by(Cover_Type) %>%
+  summarise(n=n()) %>%
+  mutate(freq = n/sum(n))
+```
+
+```{r correlation}
+#correlation of continuous features
+#subset dataframe, remove categorical variables
+df_sub <- df %>%
+  select(-starts_with("Soil"), -starts_with("Wild"), -'Cover_Type')
+
+#calculate correlations among numeric features
+df_sub_corr <- df_sub %>% 
+  cor() 
+
+#loading library for correlation plot
+library(ggcorrplot)
+
+#correlation plot
+df_sub_corr %>% ggcorrplot(type = "lower", outline.col = "white")
+```
+
+## boxplot 
+
+
+
+## Feature Engineering
+
+
+## Model Straegy
+##Multinomial Logistic Regression
+
+
+## Results
+
