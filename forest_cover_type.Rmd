@@ -1,5 +1,5 @@
 ---
-title: "forest_cover_type"
+title: "Classification of Forest Cover Type"
 author: "Ada Kiekhaefer"
 date: "3/18/2020"
 output: html_document
@@ -9,22 +9,17 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Classification of forest cover type
-##Introduction
-The actual forest cover type for a given observation (30 x 30 meter cell) was determined from US Forest Service (USFS) Region 2 Resource Information System (RIS) data. The study area included four wilderness areas found in the Roosevelt National Forest of northern Colorado. 
-Some background information for these four wilderness areas:  
-	Neota (area 2) probably has the highest mean elevational value of 
-	the 4 wilderness areas. Rawah (area 1) and Comanche Peak (area 3) 
-	would have a lower mean elevational value, while Cache la Poudre 
-	(area 4) would have the lowest mean elevational value. 
-As for primary major tree species in these areas, Neota would have 
-	spruce/fir (type 1), while Rawah and Comanche Peak would probably
-	have lodgepole pine (type 2) as their primary species, followed by 
-	spruce/fir and aspen (type 5). Cache la Poudre would tend to have 
-	Ponderosa pine (type 3), Douglas-fir (type 6), and 
-	cottonwood/willow (type 4).
-
-### List of variables
+## Goal of the Study
+  To predict forest cover types from given features (observations of 30 x 30 meter cell). The seven forest cover type are:
+  
+  Forest Cover Type Classes:	  
+  1. Spruce/Fir
+  2. Lodgepole Pine
+  3. Ponderosa Pine
+  4. Cottonwood/Willow
+  5. Aspen
+  6. Douglas-fir
+  7. Krummholz  
 
 ## Exploratory Data Analysis
 ###Loading r libraries 
@@ -46,7 +41,7 @@ df_raw %>% head()
 ```
 
 ### Added column names
-Added column names based on the information in covtype.info. 
+* Added column names based on the information in covtype.info. 
 
 ``` {r add_column_names}
 temp_name <- c('Elevation', 'Aspect', 'Slope', 'Horizontal_Distance_To_Hydrology', 'Vertical_Distance_To_Hydrology', 
@@ -63,16 +58,22 @@ col_names <- c(temp_name, soil_name, 'Cover_Type')
 df <- df_raw
 colnames(df) <- col_names
 ```
-### Checked data structures
-* There are 581,012 observations and 55 variables in the dataset including the response variable. 
-* Values in columns are all numeric.  
-* Some features should be categorical (wilderness area, soil type)
-* Wilderness_Area variable was recorded as 4 binary variables
-* Soil_Type variable was recorded as 40 binary variables 
 
+### Check data structure
+* All the columns were loaded in as numeric. I will change some columns e.g. Cover_Type to categorical. 
 ``` {r check_data}
 df_raw %>% glimpse()
 ```
+
+### Exploring the data
+* There are 581,012 observations, 55 columns in the dataset including the response variable.
+* Cover_Type: the response variable is  
+* 54 features: 10 numeric and 44 categorical features 
++ 10 numeric features: 
++ 40 Soil_Type: 40 soil types in 40 columns, one hot encoded as binary
++ 4 Wilderness_Area: 4 wilderness areas (1.Rawah, 2.Neota, 3.Comanche Peak, 4.Cache la Poudre) in 4 columns. Also one hot encoded as binary. 
+
+
 
 ### Check if there is any missing value
 * No missing value in this dataset. 
@@ -80,36 +81,75 @@ df_raw %>% glimpse()
 any(is.na(df))
 ```
 
-
+```{r category_cover}
+#change Cover_Type to categorical 
+df <- df %>% 
+  mutate_each(funs(factor), "Cover_Type")
+```
 
 ## 1. Describe the dataset and any interesting variables (feel free to include response).
 Hint: It may be useful to provide a high-level summary (i.e. descriptive statistics) on the variables
 
-* Features with different scales:  
-* Elevation: all cover types are at quite high elevation with minimum elevation at 1859 meters. 
-* Slope: range of slope is quite large with minimum 0 and maximum 66 degree (high slope, mountainous areas)
-* Wilderness_Area: mostly in wilderness area 1 (mean 0.4489) and 3 (mean 0.4361)
-* Cover_Type: the response variable has type 1 with the ratio of 0.365 and and type 2 with the ratio of 0.488 (see code below)
+1. Numeric features
+* The means of numeric values vary a lot: Slope has the smallest mean of 14.1, while Elevation has maximum mean of 2959.37. It's because many features are in different units, Slope was measured in degree while Elevation was measered in meter. 
+* Features have different ranges: the ranges of features vary. Horizontal_Distance_To_Roadways has the largest range with minimum value of 0 and maximum of 7117, while Slope has the lowest range with minimum value of 0 and maximum of 66
+* The standard deviation shows how spread or dense of the data compared to its mean. The higher standard deviation, the more spread the data from the mean. Some features have very large standard deviation (e.g. Horizontal_Distance_To_Roadways with 1559.25 sd), while some features have quite low standard deviation e.g. Hillshade_Noon with standard deviation of 19.77  
+* Most numeric features have minimum values starting at zero except Elevation with minimum value at 1859 and Vertical_Distance_To_Hydrology with minimum value at -173 
+*Both possitive and negative skewness: possitive skew means the mass of the distribution is concentrated to the left and has long tail to the right.  
+
+2. Categorical features
+* Wilderness_Area1 and Wilderness_Area3 have mean of 0.45 and 0.44, respectively. Each observation can only be in one wilderness area. It means most observations (89%) are these two wilderness area. 
+
+* Soil_Type: 4 hightest ratios are Soil_Type29 (0.2), Soil_Type23 (0.1), Soil_Type29 (0.09), Soil_Type29 (0.08) 
 
 ``` {r summary_statistics}
-#summary statistics of all features
-summary(df)
+#summary statistics of numeric features
+#summary(df)
+library(psych)
+df %>% select(Elevation:Horizontal_Distance_To_Fire_Points) %>%
+  describe()
+```
 
-# standard deviations of numerical features
-sd_numeric <- df %>% 
-  select(Elevation:Horizontal_Distance_To_Fire_Points) %>%
-  summarise_each(funs(sd))
-print(sd_numeric)
+```{r summary_categorical}
+#summary statistics of categorical features
+df %>% 
+  select(Wilderness_Area1:Soil_Type40) %>%
+  describe()
+```
 
+
+## 2. Provide up to 5 key insights that you learned from this dataset
+
+1. Cover_Type: the response variable has type 1 with the ratio of 0.365 and and type 2 with the ratio of 0.488 (see code below). These two cover types account for 85.3% of all observations
+2. Elevation: elevation seems to be the most important feature since it has different range for each forest cover class. Class 4 grows between 2,000 - 2,500 m, while Class 7 grows beteen aproximately at 3,700 - 3,700 m. However, density plot of elevation versus cover type show overlapping of elevations, so we can't build model with this feature alone)
+4. Some features are highly correlated. Horizontal_Distance_To_Hydrology has high possitive correlation with Vertical_Distance_To_Hydrology. Hillshade_3pm has high positive correlation with Aspect, but high negative corelation with Hillshade_9am. 
+5. Most observations of class 3,4,5,6 seem to have lower Horizontal_Distance_To_Roadways than class 1,2,7. Class 4 seems to have lowest Horizontal_Distance_To_Hydrology.   
+
+```{r ratio_cover}
 #ratio of Cover_Type
 df %>% 
   group_by(Cover_Type) %>%
   summarise(n=n()) %>%
-  mutate(freq = n/sum(n))
+  mutate(freq = round(n/sum(n),3))
 ```
 
+### plots of elevation versus cover type
+```{r elevation_plot}
+library(ggplot2)
+library(gridExtra)
+#boxplot of Elevation versus cover type, each cover type has median at different elevation
+p1 <- ggplot(df, aes(x=Cover_Type, y=Elevation)) +
+  geom_boxplot()
+#density plot of elevation versus cover type (overlap of elevation, can't build model with this feature alone)
+p2 <- ggplot(df, aes(x=Elevation, color=Cover_Type), alpha=0.05) + 
+  geom_density()
+
+grid.arrange(p1, p2, ncol = 2)
+```
+
+### correlation plot of numeric features
 ```{r correlation}
-#correlation of continuous features
+#correlation of numeric features
 #subset dataframe, remove categorical variables
 df_sub <- df %>%
   select(-starts_with("Soil"), -starts_with("Wild"), -'Cover_Type')
@@ -125,16 +165,196 @@ library(ggcorrplot)
 df_sub_corr %>% ggcorrplot(type = "lower", outline.col = "white")
 ```
 
-## boxplot 
+### Box plots of other features versus all cover type
+```{r features_box}
+#boxplot of Aspect versus cover type
+p3 <- ggplot(df, aes(x=Cover_Type, y=Aspect)) +
+  geom_boxplot()
 
+#boxplot of slope versus cover type
+p4 <- ggplot(df, aes(x=Cover_Type, y=Slope)) +
+  geom_boxplot()
 
+#boxplot of Horizontal_Distance_To_Hydrology versus cover type
+p5 <- ggplot(df, aes(x=Cover_Type, y=Horizontal_Distance_To_Hydrology)) +
+  geom_boxplot()
+
+#boxplot of Vertical_Distance_To_Hydrology versus cover type
+p6 <- ggplot(df, aes(x=Cover_Type, y=Vertical_Distance_To_Hydrology)) +
+  geom_boxplot()
+
+#boxplot of Horizontal_Distance_To_Roadways versus cover type
+p7 <- ggplot(df, aes(x=Cover_Type, y=Horizontal_Distance_To_Roadways)) +
+  geom_boxplot()
+
+#boxplot of Hillshade_9am versus cover type (0 = darkest area, 255 = brightest area)
+p8 <- ggplot(df, aes(x=Cover_Type, y=Hillshade_9am)) +
+  geom_boxplot()
+
+#boxplot of Hillshade_Noon versus cover type (0 = darkest area, 255 = brightest area)
+p9 <- ggplot(df, aes(x=Cover_Type, y=Hillshade_Noon)) +
+  geom_boxplot()
+
+#boxplot of Hillshade_3pm versus cover type (0 = darkest area, 255 = brightest area)
+p10 <- ggplot(df, aes(x=Cover_Type, y=Hillshade_3pm)) +
+  geom_boxplot()
+
+#boxplot of Horizontal_Distance_To_Fire_Points versus cover type 
+p11 <- ggplot(df, aes(x=Cover_Type, y=Horizontal_Distance_To_Fire_Points)) +
+  geom_boxplot()
+
+grid.arrange(p3,p4,p5,p6,p7,p8,p9,p10,p11 , ncol = 3)
+```
+
+##3. Highlight challenges in the dataset and the plans to mitigate those challenges 
+(Hint: If there are missing data, how would you address this?)
+
+* The features have different characteristics i.e. mean, spread, and range. This may effect the model. Some algorithms are sensitive to high values. The plan is to scale all features to the same range 0 to 1.
+* The dataset has more than 500k observations and 54 features. Some algorithm may take a long time to run. The plans to deal with this issues
++ Feature selection: take out some features that do not effect model performance
++ Subset the data (but still keep enough observations for each cover type)
+
+* Some features are highly correlated. The plan is to remove some correlated features. 
+
+* The dataset has no missing data. If there are missing data, how would you address this? 
++if there aren't too many data missing compare to numbers of observations, remove rows with missing data
++ if the effect of that column isn't significant for a model, remove the whole column
++ imputation, replace missing data with median (median imputation) or mean 
++ keep missing data as 'missing' category: coarse classification 
+
+* Outliers: features of some cover type have quite a few outliers.
 
 ## Feature Engineering
+Here, the numeric features were scale to range between 0 and 1. 
+```{r feature_scaling}
+#features scaling: scale numeric features to range 0 to 1
+#load caret package
+library(caret)
+processed_var <- preProcess(df %>% select(Elevation:Horizontal_Distance_To_Fire_Points), method = 'range')
+df_scaled <- predict(processed_var, df)
 
+#creat new feature called Distance_To_Hydrology, drop Horizontal_Distance_To_Hydrology and Vertical_Distance_To_Hydrology 
+# Distance_To_Hydrology = sqrt(Horizontal_Distance_To_Hydrology^2 + Vertical_Distance_To_Hydrology^2)
+
+df_scaled %>% select(Elevation:Horizontal_Distance_To_Fire_Points) %>% summary()
+
+```
+
+##Split train/test set
+```{r split_data}
+#load rsample package 
+library(rsample)
+#spliting data to train and test sets
+set.seed(20)
+df_split <- initial_split(df_scaled, prop = 0.75)
+df_train <- training(df_split)
+df_test <- testing(df_split)
+```
 
 ## Model Straegy
-##Multinomial Logistic Regression
+1. What model(s) are you using and why?
+I chose Multinomial Logistic Regression because
 
+2. Describe (in detail) how each model was developed.
+
+* First, I started training the with only three features Elevation and .  
+```{r train}
+#load library
+library(nnet)
+start_time <- Sys.time()
+model_log <- multinom(Cover_Type ~ Elevation + Horizontal_Distance_To_Roadways, data = df_train)
+end_time <- Sys.time()
+print(paste('run time : ', end_time - start_time))
+```
+
+* Next, check the model summary.
+```{r model_summary}
+summary(model_log)
+#coef(model_log)
+```
+
+* Make prediction with test dataset
+
+```{r prediction}
+#pred <- predict(model_log, df_test, type='prob')
+pred <- predict(model_log, df_test)
+```
+
+* Look at confusion matrix
+```{r confusion_matrix}
+#create confusion matrix
+con_mat <- table(df_test$Cover_Type, pred) 
+print(con_mat)
+```
+
+* Then, calculate model accuracy and f1 score
+```{r accuracy}
+#calculate accuracy
+accuracy_log <- sum(diag(con_mat))/sum(con_mat)
+print(paste('accuracy = ', accuracy_log))
+
+#calculate f1 score
+precision = matrix(NA, nrow=7)
+recall = matrix(NA, nrow = 7)
+for (i in 1:7) {
+  precision[i] <- round(con_mat[i,i]/colSums(con_mat)[i],3)
+  recall[i] <- round(con_mat[i,i]/rowSums(con_mat)[i],3)
+}
+
+f1 = 2 * (precision * recall) / (precision + recall)
+
+print('f1 scores of all classes')
+print(f1)
+
+print(paste('average f1 score of all classes', round(mean(f1),2)))
+```
+
+* As expected, the model with only two features didn't do very well. 
+
+* Try training the model with all variables
+```{r train_all}
+start_time <- Sys.time()
+model_log_all <- multinom(Cover_Type ~ ., data = df_train)
+end_time <- Sys.time()
+print(paste('run time : ', end_time - start_time))
+```
+```{r prediction_all}
+#pred <- predict(model_log, df_test, type='prob')
+pred_all <- predict(model_log_all, df_test)
+```
+
+```{r confusion_matrix_all}
+#create confusion matrix
+con_mat <- table(df_test$Cover_Type, pred_all) 
+print(con_mat)
+```
+
+* Then, calculate model accuracy and f1 score
+```{r accuracy}
+#calculate accuracy
+accuracy_log <- sum(diag(con_mat))/sum(con_mat)
+print(paste('accuracy = ', accuracy_log))
+
+#calculate f1 score
+precision = matrix(NA, nrow=7)
+recall = matrix(NA, nrow = 7)
+for (i in 1:7) {
+  precision[i] <- round(con_mat[i,i]/colSums(con_mat)[i],3)
+  recall[i] <- round(con_mat[i,i]/rowSums(con_mat)[i],3)
+}
+
+f1 = 2 * (precision * recall) / (precision + recall)
+
+print('f1 scores of all classes')
+print(f1)
+
+print(paste('average f1 score of all classes', round(mean(f1),2)))
+```
 
 ## Results
+1. Describe your model results
 
+2. (OPTIONAL) If more than 1 model was developed, please explain which model should be chosen and why.
+
+3. If more time were provided, what other strategies would you pursue? Why?
+PCA

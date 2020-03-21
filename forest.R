@@ -42,9 +42,13 @@ df %>% glimpse() #check data structure, check is there a missing data
 #check is there is a missing value
 any(is.na(df)) # no missing value
 
-#change some columns to categorical columns
+# #change some columns to categorical columns
+# df <- df %>% 
+#   mutate_each(funs(factor), c(starts_with("Wild"), starts_with("Soil"), "Cover_Type"))
+
+#change Cover_Type to categorical 
 df <- df %>% 
-  mutate_each(funs(factor), c(starts_with("Wild"), starts_with("Soil"), "Cover_Type"))
+  mutate_each(funs(factor), "Cover_Type")
 
 # #Change level names of Cover_Type 
 # Forest Cover Type Classes:	
@@ -62,7 +66,11 @@ df <- df %>%
 #gather some columns for plotting 
 
 #summary statistics
-summary(df) 
+#summary(df) 
+library(psych)
+df %>% select(Elevation:Horizontal_Distance_To_Fire_Points) %>%
+  describe()
+
 #- Elevation: all cover types are at quite high elevation with minimum elevation at 1859 meter
 #- Slope: range of slope is quite large with minimum 0 and maximum 66 degree  
 #- high slope, mountainous areas
@@ -107,12 +115,20 @@ hist(df$Slope)
 hist(df$Horizontal_Distance_To_Hydrology)
 hist(df$Vertical_Distance_To_Hydrology)
 
+#Box plot of numeric features 
+df %>%
+  select(Elevation) %>%
+  ggplot(aes(x=Elevation)) +
+  geom_boxplot()
+
+
 #boxplot of Elevation versus cover type, each cover type has median at different elevation
 ggplot(df, aes(x=Cover_Type, y=Elevation)) +
   geom_boxplot()
 #density plot of elevation versus cover type (overlap of elevation, can't build model with this feature alone)
 ggplot(df, aes(x=Elevation, color=as.factor(Cover_Type)), alpha=0.05) + 
   geom_density()
+
 #boxplot of slope versus cover type
 ggplot(df, aes(x=as.factor(Cover_Type), y=Slope)) +
   geom_boxplot()
@@ -193,14 +209,18 @@ ggplot(df, aes(x=as.factor(Cover_Type), y=Horizontal_Distance_To_Fire_Points)) +
 
 
 ## Feature Engineering
-
+#features scaling: scale numeric features to range 0 to 1
+#load caret package
+library(caret)
+processed_var <- preProcess(df %>% select(Elevation:Horizontal_Distance_To_Fire_Points), method = 'range')
+df_scaled <- predict(processed_var, df)
 
 ##Split train/test set
 #load rsample package 
 library(rsample)
 #spliting data to train and test sets
-set.seed()
-df_split <- initial_split(df, prop = 0.75)
+set.seed(20)
+df_split <- initial_split(df_scaled, prop = 0.75)
 df_train <- training(df_split)
 df_test <- testing(df_split)
 
@@ -209,11 +229,40 @@ df_test <- testing(df_split)
 #load library
 library(nnet)
 start_time <- Sys.time()
-#model_log <- multinom(Cover_Type ~ Elevation + Horizontal_Distance_To_Hydrology, data = df_train)
-model_log <- multinom(Cover_Type ~ ., data = df_train)
+model_log <- multinom(Cover_Type ~ Elevation + Horizontal_Distance_To_Roadways, data = df_train)
+#model_log <- multinom(Cover_Type ~ ., data = df_train)
 end_time <- Sys.time()
-summary(model_log)
+summary(model_log) #very slow
+#str(model_log)
+coef(model_log)
+
+#make predictions
+#pred <- predict(model_log, df_test, type='prob')
 pred <- predict(model_log, df_test)
+
+#create confusion matrix
+con_mat <- table(df_test$Cover_Type, pred) 
+print(con_mat)
+
+#calculate accuracy
+accuracy_log <- sum(diag(con_mat))/sum(con_mat)
+print(paste('accuracy = ', accuracy_log))
+
+#calculate f1 score
+precision = matrix(NA, nrow=7)
+recall = matrix(NA, nrow = 7)
+for (i in 1:7) {
+  precision[i] <- round(con_mat[i,i]/colSums(con_mat)[i],3)
+  recall[i] <- round(con_mat[i,i]/rowSums(con_mat)[i],3)
+}
+
+f1 = 2 * (precision * recall) / (precision + recall)
+
+print('f1 scores of all classes')
+print(f1)
+
+print(paste('average f1 score of all classes', round(mean(f1),2)))
+
 
 #Decision tree
 
