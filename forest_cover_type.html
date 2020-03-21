@@ -648,11 +648,14 @@ df %&gt;%
 ## Soil_Type38        42 581012 0.03 0.16   0   1     1  0
 ## Soil_Type39        43 581012 0.02 0.15   0   1     1  0
 ## Soil_Type40        44 581012 0.02 0.12   0   1     1  0</code></pre>
-<p>##2. Provide up to 5 key insights that you learned from this dataset</p>
+</div>
+<div id="provide-up-to-5-key-insights-that-you-learned-from-this-dataset" class="section level2">
+<h2>2. Provide up to 5 key insights that you learned from this dataset</h2>
 <ol style="list-style-type: decimal">
 <li>Cover_Type: the response variable has type 1 with the ratio of 0.365 and and type 2 with the ratio of 0.488 (see code below). These two cover types account for 85.3% of all observations</li>
-<li>Elevation: density plot of elevation versus cover type (overlap of elevation, can’t build model with this feature alone)</li>
-<li>Some features are highly correlated.</li>
+<li>Elevation: elevation seems to be the most important feature since it has different range for each forest cover class. Class 4 grows between 2,000 - 2,500 m, while Class 7 grows beteen aproximately at 3,700 - 3,700 m. However, density plot of elevation versus cover type show overlapping of elevations, so we can’t build model with this feature alone)</li>
+<li>Some features are highly correlated. Horizontal_Distance_To_Hydrology has high possitive correlation with Vertical_Distance_To_Hydrology. Hillshade_3pm has high positive correlation with Aspect, but high negative corelation with Hillshade_9am.</li>
+<li>Most observations of class 3,4,5,6 seem to have lower Horizontal_Distance_To_Roadways than class 1,2,7. Class 4 seems to have lowest Horizontal_Distance_To_Hydrology.</li>
 </ol>
 <pre class="r"><code>#ratio of Cover_Type
 df %&gt;% 
@@ -762,26 +765,248 @@ grid.arrange(p3,p4,p5,p6,p7,p8,p9,p10,p11 , ncol = 3)</code></pre>
 <li>if the effect of that column isn’t significant for a model, remove the whole column</li>
 <li>imputation, replace missing data with median (median imputation) or mean</li>
 <li><p>keep missing data as ‘missing’ category: coarse classification</p></li>
-<li><p>Outliers: features of some cover type have quite a few outliers, meaning they can mix in with other cover types</p></li>
+<li><p>Outliers: features of some cover type have quite a few outliers.</p></li>
 </ul>
 </div>
 </div>
 <div id="feature-engineering" class="section level2">
 <h2>Feature Engineering</h2>
+<ul>
+<li><p>Here, the numeric features were scale to range between 0 and 1. new_feature = (x - min(x))/(max(x) - min(x))</p></li>
+<li><p>Z-score standardization</p></li>
+</ul>
+<pre class="r"><code>#features scaling: scale numeric features to range 0 to 1
+#load caret package
+library(caret)</code></pre>
+<pre><code>## Loading required package: lattice</code></pre>
+<pre class="r"><code>processed_var &lt;- preProcess(df %&gt;% select(Elevation:Horizontal_Distance_To_Fire_Points), method = 'range')
+df_scaled &lt;- predict(processed_var, df)
+
+#creat new feature called Distance_To_Hydrology, drop Horizontal_Distance_To_Hydrology and Vertical_Distance_To_Hydrology 
+# Distance_To_Hydrology = sqrt(Horizontal_Distance_To_Hydrology^2 + Vertical_Distance_To_Hydrology^2)
+
+df_scaled %&gt;% select(Elevation:Horizontal_Distance_To_Fire_Points) %&gt;% summary()</code></pre>
+<pre><code>##    Elevation          Aspect           Slope       
+##  Min.   :0.0000   Min.   :0.0000   Min.   :0.0000  
+##  1st Qu.:0.4752   1st Qu.:0.1611   1st Qu.:0.1364  
+##  Median :0.5688   Median :0.3528   Median :0.1970  
+##  Mean   :0.5505   Mean   :0.4324   Mean   :0.2137  
+##  3rd Qu.:0.6523   3rd Qu.:0.7222   3rd Qu.:0.2727  
+##  Max.   :1.0000   Max.   :1.0000   Max.   :1.0000  
+##  Horizontal_Distance_To_Hydrology Vertical_Distance_To_Hydrology
+##  Min.   :0.00000                  Min.   :0.0000                
+##  1st Qu.:0.07731                  1st Qu.:0.2326                
+##  Median :0.15605                  Median :0.2623                
+##  Mean   :0.19286                  Mean   :0.2835                
+##  3rd Qu.:0.27487                  3rd Qu.:0.3127                
+##  Max.   :1.00000                  Max.   :1.0000                
+##  Horizontal_Distance_To_Roadways Hillshade_9am    Hillshade_Noon  
+##  Min.   :0.0000                  Min.   :0.0000   Min.   :0.0000  
+##  1st Qu.:0.1554                  1st Qu.:0.7795   1st Qu.:0.8386  
+##  Median :0.2806                  Median :0.8583   Median :0.8898  
+##  Mean   :0.3302                  Mean   :0.8352   Mean   :0.8792  
+##  3rd Qu.:0.4676                  3rd Qu.:0.9094   3rd Qu.:0.9331  
+##  Max.   :1.0000                  Max.   :1.0000   Max.   :1.0000  
+##  Hillshade_3pm    Horizontal_Distance_To_Fire_Points
+##  Min.   :0.0000   Min.   :0.0000                    
+##  1st Qu.:0.4685   1st Qu.:0.1428                    
+##  Median :0.5630   Median :0.2384                    
+##  Mean   :0.5611   Mean   :0.2761                    
+##  3rd Qu.:0.6614   3rd Qu.:0.3555                    
+##  Max.   :1.0000   Max.   :1.0000</code></pre>
+<p>##Split train/test set</p>
+<pre class="r"><code>#load rsample package 
+library(rsample)</code></pre>
+<pre><code>## Loading required package: tidyr</code></pre>
+<pre class="r"><code>#spliting data to train and test sets
+set.seed(20)
+df_split &lt;- initial_split(df_scaled, prop = 0.75)
+df_train &lt;- training(df_split)
+df_test &lt;- testing(df_split)</code></pre>
 </div>
 <div id="model-straegy" class="section level2">
 <h2>Model Straegy</h2>
 <ol style="list-style-type: decimal">
-<li><p>What model(s) are you using and why? ##Multinomial Logistic Regression</p></li>
+<li><p>What model(s) are you using and why? I chose Multinomial Logistic Regression because</p></li>
 <li><p>Describe (in detail) how each model was developed.</p></li>
 </ol>
+<ul>
+<li>First, I started training the with only some features.</li>
+</ul>
+<pre class="r"><code>#load library
+library(nnet)
+start_time &lt;- Sys.time()
+model_log &lt;- multinom(Cover_Type ~ Elevation + Horizontal_Distance_To_Roadways, data = df_train)</code></pre>
+<pre><code>## # weights:  28 (18 variable)
+## initial  value 847947.860639 
+## iter  10 value 395591.858042
+## iter  20 value 355352.237711
+## iter  30 value 332376.632681
+## iter  40 value 331951.340707
+## iter  50 value 331942.085844
+## final  value 331937.887926 
+## converged</code></pre>
+<pre class="r"><code># model_log &lt;- multinom(Cover_Type ~ Elevation + Wilderness_Area1 + Wilderness_Area2 + Wilderness_Area3 +
+#              Wilderness_Area4, data = df_train)
+end_time &lt;- Sys.time()
+print(paste('run time : ', end_time - start_time))</code></pre>
+<pre><code>## [1] &quot;run time :  27.2278790473938&quot;</code></pre>
+<ul>
+<li>Next, check the model summary.</li>
+</ul>
+<pre class="r"><code>summary(model_log)</code></pre>
+<pre><code>## Call:
+## multinom(formula = Cover_Type ~ Elevation + Horizontal_Distance_To_Roadways, 
+##     data = df_train)
+## 
+## Coefficients:
+##   (Intercept) Elevation Horizontal_Distance_To_Roadways
+## 2    8.495189 -14.29527                       0.4887350
+## 3   19.609609 -48.81625                       3.1236851
+## 4   19.072592 -63.03683                      11.7940514
+## 5    8.512043 -19.09848                      -3.6032682
+## 6   18.522406 -47.87832                       3.9700521
+## 7  -22.398958  28.38735                       0.6081032
+## 
+## Std. Errors:
+##   (Intercept)  Elevation Horizontal_Distance_To_Roadways
+## 2  0.03077411 0.05164859                      0.01737790
+## 3  0.07561703 0.21964129                      0.10990807
+## 4  0.09083248 0.41292354                      0.32663152
+## 5  0.06762461 0.14174164                      0.09572574
+## 6  0.07722253 0.22972517                      0.12364077
+## 7  0.15530078 0.20850537                      0.04940555
+## 
+## Residual Deviance: 663875.8 
+## AIC: 663911.8</code></pre>
+<pre class="r"><code>#coef(model_log)</code></pre>
+<ul>
+<li>Make prediction with test dataset</li>
+</ul>
+<pre class="r"><code>#pred &lt;- predict(model_log, df_test, type='prob')
+pred &lt;- predict(model_log, df_test)</code></pre>
+<ul>
+<li>Look at confusion matrix</li>
+</ul>
+<pre class="r"><code>#create confusion matrix
+con_mat &lt;- table(df_test$Cover_Type, pred) 
+print(con_mat)</code></pre>
+<pre><code>##    pred
+##         1     2     3     4     5     6     7
+##   1 34690 17414    12     0     0     0   947
+##   2 14348 55199  1078     0     0     0     6
+##   3     0  2657  6378     0     0     0     0
+##   4     0     1   694     0     0     0     0
+##   5     0  2420    32     0     0     0     0
+##   6     0  1194  3068     0     0     0     0
+##   7  4074    24     0     0     0     0  1017</code></pre>
+<ul>
+<li>Then, calculate model accuracy and f1 score</li>
+</ul>
+<pre class="r"><code>#calculate accuracy
+accuracy_log &lt;- sum(diag(con_mat))/sum(con_mat)
+print(paste('accuracy = ', accuracy_log))</code></pre>
+<pre><code>## [1] &quot;accuracy =  0.669755530006265&quot;</code></pre>
+<pre class="r"><code>#calculate f1 score
+precision = matrix(NA, nrow=7)
+recall = matrix(NA, nrow = 7)
+for (i in 1:7) {
+  precision[i] &lt;- round(con_mat[i,i]/colSums(con_mat)[i],3)
+  recall[i] &lt;- round(con_mat[i,i]/rowSums(con_mat)[i],3)
+}
+
+f1 = 2 * (precision * recall) / (precision + recall)
+
+print('f1 scores of all classes')</code></pre>
+<pre><code>## [1] &quot;f1 scores of all classes&quot;</code></pre>
+<pre class="r"><code>print(f1)</code></pre>
+<pre><code>##           [,1]
+## [1,] 0.6534996
+## [2,] 0.7387314
+## [3,] 0.6282956
+## [4,]       NaN
+## [5,]       NaN
+## [6,]       NaN
+## [7,] 0.2872280</code></pre>
+<pre class="r"><code>print(paste('average f1 score of all classes', round(mean(f1),2)))</code></pre>
+<pre><code>## [1] &quot;average f1 score of all classes NaN&quot;</code></pre>
+<ul>
+<li><p>As expected, the model with only two features didn’t do very well.</p></li>
+<li><p>Try training the model with all variables</p></li>
+</ul>
+<pre class="r"><code>start_time &lt;- Sys.time()
+model_log_all &lt;- multinom(Cover_Type ~ ., data = df_train)</code></pre>
+<pre><code>## # weights:  392 (330 variable)
+## initial  value 847947.860639 
+## iter  10 value 410348.229758
+## iter  20 value 375023.638444
+## iter  30 value 364314.583351
+## iter  40 value 361326.095592
+## iter  50 value 342971.035759
+## iter  60 value 317066.699510
+## iter  70 value 307425.379202
+## iter  80 value 303769.934523
+## iter  90 value 299916.341172
+## iter 100 value 290681.545759
+## final  value 290681.545759 
+## stopped after 100 iterations</code></pre>
+<pre class="r"><code>end_time &lt;- Sys.time()
+print(paste('run time : ', end_time - start_time))</code></pre>
+<pre><code>## [1] &quot;run time :  4.87525693575541&quot;</code></pre>
+<ul>
+<li>This part takes so long # <code>{r model_summary_all} # summary(model_log) # #coef(model_log) #</code></li>
+</ul>
+<pre class="r"><code>#pred &lt;- predict(model_log, df_test, type='prob')
+pred_all &lt;- predict(model_log_all, df_test)</code></pre>
+<pre class="r"><code>#create confusion matrix
+con_mat &lt;- table(df_test$Cover_Type, pred_all) 
+print(con_mat)</code></pre>
+<pre><code>##    pred_all
+##         1     2     3     4     5     6     7
+##   1 37269 14387     6     0     2    47  1352
+##   2 13790 55038  1192     5   112   367   127
+##   3    66   731  7070   328    52   774    14
+##   4     5     1   307   267     0   113     2
+##   5     3  2284    89     0    67     9     0
+##   6     8  1092  1991    60    44  1064     3
+##   7  2004    35    24     0     0    18  3034</code></pre>
+<ul>
+<li>Then, calculate model accuracy and f1 score</li>
+</ul>
+<pre class="r"><code>#calculate accuracy
+accuracy_log &lt;- sum(diag(con_mat))/sum(con_mat)
+print(paste('accuracy = ', accuracy_log))</code></pre>
+<pre><code>## [1] &quot;accuracy =  0.714677149525311&quot;</code></pre>
+<pre class="r"><code>#calculate f1 score
+precision = matrix(NA, nrow=7)
+recall = matrix(NA, nrow = 7)
+for (i in 1:7) {
+  precision[i] &lt;- round(con_mat[i,i]/colSums(con_mat)[i],3)
+  recall[i] &lt;- round(con_mat[i,i]/rowSums(con_mat)[i],3)
+}
+
+f1 = 2 * (precision * recall) / (precision + recall)
+
+print('f1 scores of all classes')</code></pre>
+<pre><code>## [1] &quot;f1 scores of all classes&quot;</code></pre>
+<pre class="r"><code>print(f1)</code></pre>
+<pre><code>##            [,1]
+## [1,] 0.70149964
+## [2,] 0.76318533
+## [3,] 0.71743391
+## [4,] 0.39422053
+## [5,] 0.04857993
+## [6,] 0.32014388
+## [7,] 0.62871157</code></pre>
+<pre class="r"><code>print(paste('average f1 score of all classes', round(mean(f1),2)))</code></pre>
+<pre><code>## [1] &quot;average f1 score of all classes 0.51&quot;</code></pre>
 </div>
 <div id="results" class="section level2">
 <h2>Results</h2>
 <ol style="list-style-type: decimal">
 <li><p>Describe your model results</p></li>
 <li><p>(OPTIONAL) If more than 1 model was developed, please explain which model should be chosen and why.</p></li>
-<li><p>If more time were provided, what other strategies would you pursue? Why?</p></li>
+<li><p>If more time were provided, what other strategies would you pursue? Why? Random Forest</p></li>
 </ol>
 </div>
 

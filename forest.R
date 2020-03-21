@@ -268,6 +268,11 @@ print(paste('average f1 score of all classes', round(mean(f1),2)))
 
 
 #Random Forest
+library(caret)
+#library(mlbench)
+set.seed(42)
+model_ran <- train(Cover_Type ~ ., tuneLength = 1, data = df_scaled, method = 'ranger',
+                   trControl=trainControl(method = 'cv', number = 2, verboseIter = TRUE)) 
 
 
 

@@ -225,12 +225,20 @@ grid.arrange(p3,p4,p5,p6,p7,p8,p9,p10,p11 , ncol = 3)
 * Outliers: features of some cover type have quite a few outliers.
 
 ## Feature Engineering
-Here, the numeric features were scale to range between 0 and 1. 
+* Normalization: the numeric features can be scaled to range between 0 and 1. It is useful when the data is uniform across overall ranges and has few outliers.
++ new_feature = (x - min(x))/(max(x) - min(x))
+
+* Here, I used Z-score standardization. It is useful when the data have some outliers and measurments are in different scales of magnitude. The scale features have mean of zero and variance of 1. 
++ new_feature = (x - mean(x))/sd
+
+
 ```{r feature_scaling}
 #features scaling: scale numeric features to range 0 to 1
 #load caret package
 library(caret)
-processed_var <- preProcess(df %>% select(Elevation:Horizontal_Distance_To_Fire_Points), method = 'range')
+#processed_var <- preProcess(df %>% select(Elevation:Horizontal_Distance_To_Fire_Points), method = 'range')
+
+processed_var <- preProcess(df %>% select(Elevation:Horizontal_Distance_To_Fire_Points), method = c('center', 'scale'))
 df_scaled <- predict(processed_var, df)
 
 #creat new feature called Distance_To_Hydrology, drop Horizontal_Distance_To_Hydrology and Vertical_Distance_To_Hydrology 
@@ -257,12 +265,14 @@ I chose Multinomial Logistic Regression because
 
 2. Describe (in detail) how each model was developed.
 
-* First, I started training the with only three features Elevation and .  
+* First, I started training the with only some features.  
 ```{r train}
 #load library
 library(nnet)
 start_time <- Sys.time()
 model_log <- multinom(Cover_Type ~ Elevation + Horizontal_Distance_To_Roadways, data = df_train)
+# model_log <- multinom(Cover_Type ~ Elevation + Wilderness_Area1 + Wilderness_Area2 + Wilderness_Area3 +
+#              Wilderness_Area4, data = df_train)
 end_time <- Sys.time()
 print(paste('run time : ', end_time - start_time))
 ```
@@ -318,6 +328,13 @@ model_log_all <- multinom(Cover_Type ~ ., data = df_train)
 end_time <- Sys.time()
 print(paste('run time : ', end_time - start_time))
 ```
+
+* This part takes so long
+# ```{r model_summary_all}
+# summary(model_log)
+# #coef(model_log)
+# ```
+
 ```{r prediction_all}
 #pred <- predict(model_log, df_test, type='prob')
 pred_all <- predict(model_log_all, df_test)
@@ -330,7 +347,7 @@ print(con_mat)
 ```
 
 * Then, calculate model accuracy and f1 score
-```{r accuracy}
+```{r accuracy_all}
 #calculate accuracy
 accuracy_log <- sum(diag(con_mat))/sum(con_mat)
 print(paste('accuracy = ', accuracy_log))
@@ -351,10 +368,84 @@ print(f1)
 print(paste('average f1 score of all classes', round(mean(f1),2)))
 ```
 
+```{r log_model_caret}
+#train model with caret package
+set.seed(42)
+df_ind = createDataPartition(df_scaled$Cover_Type, p = 0.75, list = FALSE)
+df_train2 = df_scaled[df_ind, ]
+df_test2 = df_scaled[-df_ind, ]
+model_log_caret <- train(
+  Cover_Type ~ .,
+  data = df_train2,
+  method = "multinom",
+  trControl = trainControl(method = "cv", number = 2),
+  #  preProcess = c("pca"),
+  #  preProcess = c("center", "scale"),
+    trace = FALSE
+)
+
+pred_log_model_caret <- predict(model_log_caret, df_test2)
+con_mat_caret <- table(df_test2$Cover_Type, pred_log_model_caret)
+con_mat_caret
+#calculate accuracy
+accuracy_log2 <- sum(diag(con_mat_caret))/sum(con_mat_caret)
+print(paste('accuracy = ', accuracy_log))
+
+#calculate f1 score
+precision2 = matrix(NA, nrow=7)
+recall2 = matrix(NA, nrow = 7)
+for (i in 1:7) {
+  precision2[i] <- round(con_mat_caret[i,i]/colSums(con_mat_caret)[i],3)
+  recall2[i] <- round(con_mat_caret[i,i]/rowSums(con_mat_caret)[i],3)
+}
+
+f1_caret = 2 * (precision2 * recall2) / (precision2 + recall2)
+
+print('f1 scores of all classes')
+print(f1_caret)
+
+print(paste('average f1 score of all classes', round(mean(f1_caret),2)))
+
+```
+
+* Fitting decision tree model
+```{r decision_tree}
+library(rpart)
+n <- nrow(df)
+n_train <- round(0.8 * n)
+train_ind <- sample(1:n, n_train)
+df_train_tree <- df[train_ind, ]
+df_test_tree <- df[-train_ind,]
+model_tree <- rpart(Cover_Type ~ ., data = df_train_tree, 
+                    method = "class")
+pred_tree <- predict(model_tree, df_test_tree, type = "class")
+con_mat_tree <- confusionMatrix(pred_tree, df_test_tree$Cover_Type)
+con_mat_tree
+```
+
+```{r bagging_tree}
+library(ipred)
+model_bag <- bagging(Cover_Type ~ ., data = df_train_tree)
+```
+
 ## Results
 1. Describe your model results
+
+accuracy = numbers of correct prediction/numbers of total observations
 
 2. (OPTIONAL) If more than 1 model was developed, please explain which model should be chosen and why.
 
 3. If more time were provided, what other strategies would you pursue? Why?
-PCA
+* Random Forest Model
++ Improve accuracy of decision tree model by fitting many trees
++ Fit each one to a boostrap sample you the data, called boostrap aggregation or bagging
++ Randomly sample columns at each split
+
+```{r model_random_forest}
+library(caret)
+#library(mlbench)
+set.seed(42)
+model_ran <- train(Cover_Type ~ ., tuneLength = 1, data = df_train, method = 'ranger',
+                   trControl=trainControl(method = 'cv', number = 2, verboseIter = TRUE)) 
+
+```
