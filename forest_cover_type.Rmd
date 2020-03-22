@@ -340,21 +340,7 @@ print(con_mat)
 
 ```
 
-* Fitting decision tree model
-```{r decision_tree}
-library(rpart)
-library(Metrics)
-n <- nrow(df)
-n_train <- round(0.8 * n)
-train_ind <- sample(1:n, n_train)
-df_train_tree <- df[train_ind, ]
-df_test_tree <- df[-train_ind,]
-model_tree <- rpart(Cover_Type ~ ., data = df_train_tree, 
-                    method = "class")
-pred_tree <- predict(model_tree, df_test_tree, type = "class")
-con_mat_tree <- confusionMatrix(pred_tree, df_test_tree$Cover_Type)
-con_mat_tree
-```
+
 ###Train a random forest model
 ```{r model_random_forest}
 library(caret)
@@ -381,11 +367,18 @@ print(con_mat_ran)
 3. If more time were provided, what other strategies would you pursue? Why?
 
 ### Multinomial Logistic Regression
-* The MLR model yielded acccuracy of 
-+ accuracy = numbers of correct predictions/number of total data points
+* Accuracy, Precision, and Recall of all classes are shown in black, blue, and red lines, respectively. 
+* The MLR model yielded overall acccuracy of 71.67% with accuracy of each class ranging between 0.50 (Class 5) - 0.91 (Class 3). The precision of all classes range between 0.43 (Class 4) - 1 (Class 5) and recall range between 0.002 (Class 5) - 0.85 (Class 3). The model has very low recall of class 4,5, and 6. 
 
-```{r print_con_mat}
-print(con_mat)
+```{r plot_by_class}
+log_byclass <- data.frame(con_mat$byClass)
+log_byclass %>%
+  ggplot() +
+  geom_line(aes(x=1:7, y= Balanced.Accuracy), color='Black') +
+  geom_line(aes(x=1:7, y=Precision), color='Blue') +
+  geom_line(aes(x=1:7, y=Recall), color='Red') +
+  scale_color_discrete(name = "Y series", breaks = c("Precision", "Recall")) +
+  labs(x = 'Class', y = 'Value')
 ```
 
 ### Random Forest
@@ -394,3 +387,16 @@ print(con_mat)
 + Fit each one to a boostrap sample of the data, called boostrap aggregation or bagging
 + Randomly sample columns at each split 
 
+* The random forest model (cv = 2, mtry = 14) has overall accuracy of 94.14% with accuracy of each class ranging between 0.90 (Class 5) - 0.98 (Class 3). The precision of all classes range between 0.92 (Class 4) - 0.97 (Class 7) and recall range between 0.79 (Class 5) - 0.97 (Class 2). The recall of Class 5 is lowest at 0.79
+
+* Class 5 seems to have lowest accuracy and recall from both models. 
+```{r plot_by_class_ran}
+ran_byclass <- data.frame(con_mat_ran3$byClass)
+ran_byclass %>%
+  ggplot() +
+  geom_line(aes(x=1:7, y= Balanced.Accuracy), color='Black') +
+  geom_line(aes(x=1:7, y=Precision), color='Blue') +
+  geom_line(aes(x=1:7, y=Recall), color='Red') +
+  scale_color_discrete(name = "Y series", breaks = c("Balanced.Accuracy", "Precision", "Recall")) +
+  labs(x = 'Class', y = 'Value')
+```

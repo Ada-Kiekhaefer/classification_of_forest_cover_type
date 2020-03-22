@@ -311,7 +311,21 @@ print(paste('average f1 score of all classes', round(mean(f1_caret),2)))
 
 
 #Decision tree
-
+#* Fitting decision tree model
+#```{r decision_tree}
+library(rpart)
+library(Metrics)
+n <- nrow(df)
+n_train <- round(0.8 * n)
+train_ind <- sample(1:n, n_train)
+df_train_tree <- df[train_ind, ]
+df_test_tree <- df[-train_ind,]
+model_tree <- rpart(Cover_Type ~ ., data = df_train_tree, 
+                    method = "class")
+pred_tree <- predict(model_tree, df_test_tree, type = "class")
+con_mat_tree <- confusionMatrix(pred_tree, df_test_tree$Cover_Type)
+con_mat_tree
+#```
 
 #Fit bagging tree 
 library(ipred)
@@ -363,4 +377,6 @@ print(con_mat_ran3)
 
 # Results -----------------------------------------------------------------
 
-
++ accuracy: numbers of correct predictions/number of total data points
++ sensitivity (true positive rate or recall): measures the proportion of actual positives that are correctly identified
++specificity (true negative rate): measures the proportion of actual negatives that are correctly identified
