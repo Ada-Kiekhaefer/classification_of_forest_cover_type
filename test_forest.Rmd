@@ -1,0 +1,51 @@
+---
+title: "Untitled"
+author: "Ada Kiekhaefer"
+date: "3/21/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars, message=FALSE, eval=FALSE}
+library(dplyr)
+summary(cars)
+```
+
+```{r print_test_eval}
+print(paste('test_eval = ', test_eval))
+```
+### Numeric Features
+* Elevation: Elevation in meters
+* Aspect: Aspect in degrees azimuth 
+* Slope: Slope in degrees
+* Horizontal_Distance_To_Hydrology: Horz Dist to nearest surface water in meters
+* Vertical_Distance_To_Hydrology: Vert Dist to nearest surface water in meters
+* Horizontal_Distance_To_Roadways: Horz Dist to nearest roadway in meters
+* Hillshade_9am: Hillshade index at 9am, summer solstice (0 to 255 index) 
+* Hillshade_Noon: Hillshade index at noon, summer soltice (0 to 255 index)
+* Hillshade_3pm: Hillshade index at 3pm, summer solstice (0 to 255 index) 
+* Horizontal_Distance_To_Fire_Points: Horz Dist to nearest wildfire ignition points in meters
+
+### Categorical Features
+* Wilderness_Area (4 binary columns):  0 (absence) or 1 (presence)  Wilderness area designation
+* Soil_Type (40 binary columns): 0 (absence) or 1 (presence)
+* Cover_Type (7 types): Forest Cover Type designation (1 to 7)              
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

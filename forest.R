@@ -210,6 +210,8 @@ ggplot(df, aes(x=as.factor(Cover_Type), y=Horizontal_Distance_To_Fire_Points)) +
 
 ## Feature Engineering
 #features scaling: scale numeric features to range 0 to 1
+# Normalization: the numeric features can be scaled to range between 0 and 1. It is useful when the data is uniform across overall ranges and has few outliers.
+# + new_feature = (x - min(x))/(max(x) - min(x))
 #load caret package
 library(caret)
 processed_var <- preProcess(df %>% select(Elevation:Horizontal_Distance_To_Fire_Points), method = 'range')
@@ -244,6 +246,8 @@ pred <- predict(model_log, df_test)
 con_mat <- table(df_test$Cover_Type, pred) 
 print(con_mat)
 
+#Then, calculate model accuracy and f1 score
+#```{r accuracy}
 #calculate accuracy
 accuracy_log <- sum(diag(con_mat))/sum(con_mat)
 print(paste('accuracy = ', accuracy_log))
@@ -263,9 +267,55 @@ print(f1)
 
 print(paste('average f1 score of all classes', round(mean(f1),2)))
 
+# multinomial using caret
+
+#```{r log_model_caret}
+#train model with caret package
+set.seed(42)
+df_ind = createDataPartition(df_scaled$Cover_Type, p = 0.75, list = FALSE)
+df_train2 = df_scaled[df_ind, ]
+df_test2 = df_scaled[-df_ind, ]
+model_log_caret <- train(
+  Cover_Type ~ .,
+  data = df_train2,
+  method = "multinom",
+  trControl = trainControl(method = "cv", number = 2),
+  #  preProcess = c("pca"),
+  #  preProcess = c("center", "scale"),
+  trace = FALSE
+)
+
+pred_log_model_caret <- predict(model_log_caret, df_test2)
+con_mat_caret <- table(df_test2$Cover_Type, pred_log_model_caret)
+con_mat_caret
+#calculate accuracy
+accuracy_log2 <- sum(diag(con_mat_caret))/sum(con_mat_caret)
+print(paste('accuracy = ', accuracy_log))
+
+#calculate f1 score
+precision2 = matrix(NA, nrow=7)
+recall2 = matrix(NA, nrow = 7)
+for (i in 1:7) {
+  precision2[i] <- round(con_mat_caret[i,i]/colSums(con_mat_caret)[i],3)
+  recall2[i] <- round(con_mat_caret[i,i]/rowSums(con_mat_caret)[i],3)
+}
+
+f1_caret = 2 * (precision2 * recall2) / (precision2 + recall2)
+
+print('f1 scores of all classes')
+print(f1_caret)
+
+print(paste('average f1 score of all classes', round(mean(f1_caret),2)))
+
+#```
+
 
 #Decision tree
 
+
+#Fit bagging tree 
+library(ipred)
+model_bag <- bagging(Cover_Type ~ ., data = df_train_tree) #take too long
 
 #Random Forest
 library(caret)
@@ -273,6 +323,41 @@ library(caret)
 set.seed(42)
 model_ran <- train(Cover_Type ~ ., tuneLength = 1, data = df_scaled, method = 'ranger',
                    trControl=trainControl(method = 'cv', number = 2, verboseIter = TRUE)) 
+
+
+# Train a random forest model ---------------------------------------------
+
+#```{r model_forest2}
+set.seed(64)
+tunegrid <- expand.grid(.mtry=8, 
+                        .splitrule="gini",
+                        .min.node.size=1)
+model_ran2 <- train(Cover_Type ~ ., tuneLength = 1, data = df_train, method = 'ranger', 
+                    tuneGrid=tunegrid,
+                    trControl=trainControl(method = 'cv', number = 2, verboseIter = TRUE)) 
+
+print(model_ran2)
+#```
+
+
+
+#```{r model_forest3}
+set.seed(64)
+tunegrid <- expand.grid(.mtry=14, 
+                        .splitrule="gini",
+                        .min.node.size=1)
+model_ran3 <- train(Cover_Type ~ ., tuneLength = 1, data = df_train, method = 'ranger', 
+                    tuneGrid=tunegrid,
+                    #                    num.trees = 500,
+                    trControl=trainControl(method = 'cv', number = 2, verboseIter = TRUE)) 
+print(model_ran3)
+#```
+
+#```{r predict_forest}
+pred_ran3 <- predict(model_ran3, df_test)
+con_mat_ran3 <- confusionMatrix(pred_ran3, df_test$Cover_Type)
+print(con_mat_ran3) 
+#```
 
 
 

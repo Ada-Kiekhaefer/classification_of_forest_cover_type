@@ -21,9 +21,25 @@ knitr::opts_chunk$set(echo = TRUE)
   6. Douglas-fir
   7. Krummholz  
 
+### Numeric Features
+* Elevation: Elevation in meters
+* Aspect: Aspect in degrees azimuth 
+* Slope: Slope in degrees
+* Horizontal_Distance_To_Hydrology: Horz Dist to nearest surface water in meters
+* Vertical_Distance_To_Hydrology: Vert Dist to nearest surface water in meters
+* Horizontal_Distance_To_Roadways: Horz Dist to nearest roadway in meters
+* Hillshade_9am: Hillshade index at 9am, summer solstice (0 to 255 index) 
+* Hillshade_Noon: Hillshade index at noon, summer soltice (0 to 255 index)
+* Hillshade_3pm: Hillshade index at 3pm, summer solstice (0 to 255 index) 
+* Horizontal_Distance_To_Fire_Points: Horz Dist to nearest wildfire ignition points in meters
+
+### Categorical Features
+* Wilderness_Area (4 binary columns):  0 (absence) or 1 (presence)  Wilderness area designation
+* Soil_Type (40 binary columns): 0 (absence) or 1 (presence)
+* Cover_Type (7 types): Forest Cover Type designation (1 to 7)              
 ## Exploratory Data Analysis
 ###Loading r libraries 
-``` {r load_library}
+``` {r load_library, message=FALSE}
 #Loading r libraries
 library(dplyr)
 library(readr)
@@ -41,7 +57,7 @@ df_raw %>% head()
 ```
 
 ### Added column names
-* Added column names based on the information in covtype.info. 
+* I added column names based on the information in covtype.info. 
 
 ``` {r add_column_names}
 temp_name <- c('Elevation', 'Aspect', 'Slope', 'Horizontal_Distance_To_Hydrology', 'Vertical_Distance_To_Hydrology', 
@@ -60,20 +76,18 @@ colnames(df) <- col_names
 ```
 
 ### Check data structure
-* All the columns were loaded in as numeric. I will change some columns e.g. Cover_Type to categorical. 
+* Check the structure of the dataset. All the columns were loaded in as numeric. I will change Cover_Type to categorical. 
 ``` {r check_data}
 df_raw %>% glimpse()
 ```
 
 ### Exploring the data
-* There are 581,012 observations, 55 columns in the dataset including the response variable.
-* Cover_Type: the response variable is  
+* There are 581,012 observations, 55 columns in the dataset including the response variable (Cover_Type).
+* Cover_Type: the response variable  
 * 54 features: 10 numeric and 44 categorical features 
 + 10 numeric features: 
-+ 40 Soil_Type: 40 soil types in 40 columns, one hot encoded as binary
-+ 4 Wilderness_Area: 4 wilderness areas (1.Rawah, 2.Neota, 3.Comanche Peak, 4.Cache la Poudre) in 4 columns. Also one hot encoded as binary. 
-
-
++ 40 Soil_Type: 40 soil types in 40 columns
++ 4 Wilderness_Area: 4 wilderness areas (1.Rawah, 2.Neota, 3.Comanche Peak, 4.Cache la Poudre) in 4 columns.  
 
 ### Check if there is any missing value
 * No missing value in this dataset. 
@@ -90,8 +104,9 @@ df <- df %>%
 ## 1. Describe the dataset and any interesting variables (feel free to include response).
 Hint: It may be useful to provide a high-level summary (i.e. descriptive statistics) on the variables
 
+(The summary statistics are shown below)
 1. Numeric features
-* The means of numeric values vary a lot: Slope has the smallest mean of 14.1, while Elevation has maximum mean of 2959.37. It's because many features are in different units, Slope was measured in degree while Elevation was measered in meter. 
+* The means of numeric features vary: Slope has the smallest mean of 14.1, while Elevation has maximum mean of 2959.37. It's because many features are in different units, Slope was measured in degree while Elevation was measered in meter. 
 * Features have different ranges: the ranges of features vary. Horizontal_Distance_To_Roadways has the largest range with minimum value of 0 and maximum of 7117, while Slope has the lowest range with minimum value of 0 and maximum of 66
 * The standard deviation shows how spread or dense of the data compared to its mean. The higher standard deviation, the more spread the data from the mean. Some features have very large standard deviation (e.g. Horizontal_Distance_To_Roadways with 1559.25 sd), while some features have quite low standard deviation e.g. Hillshade_Noon with standard deviation of 19.77  
 * Most numeric features have minimum values starting at zero except Elevation with minimum value at 1859 and Vertical_Distance_To_Hydrology with minimum value at -173 
@@ -120,9 +135,10 @@ df %>%
 
 ## 2. Provide up to 5 key insights that you learned from this dataset
 
-1. Cover_Type: the response variable has type 1 with the ratio of 0.365 and and type 2 with the ratio of 0.488 (see code below). These two cover types account for 85.3% of all observations
-2. Elevation: elevation seems to be the most important feature since it has different range for each forest cover class. Class 4 grows between 2,000 - 2,500 m, while Class 7 grows beteen aproximately at 3,700 - 3,700 m. However, density plot of elevation versus cover type show overlapping of elevations, so we can't build model with this feature alone)
-4. Some features are highly correlated. Horizontal_Distance_To_Hydrology has high possitive correlation with Vertical_Distance_To_Hydrology. Hillshade_3pm has high positive correlation with Aspect, but high negative corelation with Hillshade_9am. 
+(The plots are shown below)
+1. Cover_Type: Class 1 has the ratio of 0.365 and and Class 2 has the ratio of 0.488 (see code below). These two cover types account for 85.3% of all observations.
+2. Elevation: elevation seems to be the most important feature since it has different range for each forest cover class. For example, Class 4 grows between 2,000 - 2,500 m, while Class 7 grows beteen aproximately at 3,700 - 3,700 m. However, density plot of elevation versus cover type show overlapping of elevations, so we can't build model with this feature alone)
+4. Some features are highly correlated. Horizontal_Distance_To_Hydrology has high possitive correlation with Vertical_Distance_To_Hydrology. Hillshade_3pm has high positive correlation with Aspect but has high negative corelation with Hillshade_9am. 
 5. Most observations of class 3,4,5,6 seem to have lower Horizontal_Distance_To_Roadways than class 1,2,7. Class 4 seems to have lowest Horizontal_Distance_To_Hydrology.   
 
 ```{r ratio_cover}
@@ -209,26 +225,22 @@ grid.arrange(p3,p4,p5,p6,p7,p8,p9,p10,p11 , ncol = 3)
 ##3. Highlight challenges in the dataset and the plans to mitigate those challenges 
 (Hint: If there are missing data, how would you address this?)
 
-* The features have different characteristics i.e. mean, spread, and range. This may effect the model. Some algorithms are sensitive to high values. The plan is to scale all features to the same range 0 to 1.
-* The dataset has more than 500k observations and 54 features. Some algorithm may take a long time to run. The plans to deal with this issues
+* The features have different characteristics i.e. mean, spread, and range. This may effect the model. Some algorithms are sensitive to high values. Feature scaling can help mitigate this issue. 
+* The dataset has more than 500k observations and 54 features. Some algorithm may take a long time to run. I can mitigate this problem by.
 + Feature selection: take out some features that do not effect model performance
 + Subset the data (but still keep enough observations for each cover type)
 
-* Some features are highly correlated. The plan is to remove some correlated features. 
+* Some features are highly correlated. This can be mitigated by removing some correlated features. 
 
 * The dataset has no missing data. If there are missing data, how would you address this? 
 +if there aren't too many data missing compare to numbers of observations, remove rows with missing data
 + if the effect of that column isn't significant for a model, remove the whole column
-+ imputation, replace missing data with median (median imputation) or mean 
++ imputation, replace missing data with median (median imputation) or kNN imputation. With this dataset, I would choose kNN imputation because forest usually cover large area (bigger than 30x30 meters).  
 + keep missing data as 'missing' category: coarse classification 
 
-* Outliers: features of some cover type have quite a few outliers.
 
 ## Feature Engineering
-* Normalization: the numeric features can be scaled to range between 0 and 1. It is useful when the data is uniform across overall ranges and has few outliers.
-+ new_feature = (x - min(x))/(max(x) - min(x))
-
-* Here, I used Z-score standardization. It is useful when the data have some outliers and measurments are in different scales of magnitude. The scale features have mean of zero and variance of 1. 
+* Here, I used Z-score standardization. It is useful when the data have some outliers and measurments are in different scales of magnitude. The scaled features have mean of zero and variance of 1. 
 + new_feature = (x - mean(x))/sd
 
 
@@ -236,8 +248,6 @@ grid.arrange(p3,p4,p5,p6,p7,p8,p9,p10,p11 , ncol = 3)
 #features scaling: scale numeric features to range 0 to 1
 #load caret package
 library(caret)
-#processed_var <- preProcess(df %>% select(Elevation:Horizontal_Distance_To_Fire_Points), method = 'range')
-
 processed_var <- preProcess(df %>% select(Elevation:Horizontal_Distance_To_Fire_Points), method = c('center', 'scale'))
 df_scaled <- predict(processed_var, df)
 
@@ -248,7 +258,8 @@ df_scaled %>% select(Elevation:Horizontal_Distance_To_Fire_Points) %>% summary()
 
 ```
 
-##Split train/test set
+###Split train/test set
+I split train/test set to 75% and 25% of the total data, respectively. 
 ```{r split_data}
 #load rsample package 
 library(rsample)
@@ -261,11 +272,14 @@ df_test <- testing(df_split)
 
 ## Model Straegy
 1. What model(s) are you using and why?
-I chose Multinomial Logistic Regression because
+* Multinomial Logistic Regression: First, I started with Multinomial Logistic Regression because it's a simple model, didn't take too much time to run, and easy to interpret. 
+*  Random Forest: 
++ Gives better performance
++ Easy to train and tune
 
 2. Describe (in detail) how each model was developed.
 
-* First, I started training the with only some features.  
+* First, I started training MLR the with only two features. Just to see the how long it take to run.   
 ```{r train}
 #load library
 library(nnet)
@@ -293,30 +307,8 @@ pred <- predict(model_log, df_test)
 * Look at confusion matrix
 ```{r confusion_matrix}
 #create confusion matrix
-con_mat <- table(df_test$Cover_Type, pred) 
-print(con_mat)
-```
-
-* Then, calculate model accuracy and f1 score
-```{r accuracy}
-#calculate accuracy
-accuracy_log <- sum(diag(con_mat))/sum(con_mat)
-print(paste('accuracy = ', accuracy_log))
-
-#calculate f1 score
-precision = matrix(NA, nrow=7)
-recall = matrix(NA, nrow = 7)
-for (i in 1:7) {
-  precision[i] <- round(con_mat[i,i]/colSums(con_mat)[i],3)
-  recall[i] <- round(con_mat[i,i]/rowSums(con_mat)[i],3)
-}
-
-f1 = 2 * (precision * recall) / (precision + recall)
-
-print('f1 scores of all classes')
-print(f1)
-
-print(paste('average f1 score of all classes', round(mean(f1),2)))
+con_mat_test <- confusionMatrix(pred, df_test$Cover_Type) 
+print(con_mat_test)
 ```
 
 * As expected, the model with only two features didn't do very well. 
@@ -327,6 +319,7 @@ start_time <- Sys.time()
 model_log_all <- multinom(Cover_Type ~ ., data = df_train)
 end_time <- Sys.time()
 print(paste('run time : ', end_time - start_time))
+print(model_log_all)
 ```
 
 * This part takes so long
@@ -342,75 +335,15 @@ pred_all <- predict(model_log_all, df_test)
 
 ```{r confusion_matrix_all}
 #create confusion matrix
-con_mat <- table(df_test$Cover_Type, pred_all) 
+con_mat <- confusionMatrix(pred_all, df_test$Cover_Type) 
 print(con_mat)
-```
-
-* Then, calculate model accuracy and f1 score
-```{r accuracy_all}
-#calculate accuracy
-accuracy_log <- sum(diag(con_mat))/sum(con_mat)
-print(paste('accuracy = ', accuracy_log))
-
-#calculate f1 score
-precision = matrix(NA, nrow=7)
-recall = matrix(NA, nrow = 7)
-for (i in 1:7) {
-  precision[i] <- round(con_mat[i,i]/colSums(con_mat)[i],3)
-  recall[i] <- round(con_mat[i,i]/rowSums(con_mat)[i],3)
-}
-
-f1 = 2 * (precision * recall) / (precision + recall)
-
-print('f1 scores of all classes')
-print(f1)
-
-print(paste('average f1 score of all classes', round(mean(f1),2)))
-```
-
-```{r log_model_caret}
-#train model with caret package
-set.seed(42)
-df_ind = createDataPartition(df_scaled$Cover_Type, p = 0.75, list = FALSE)
-df_train2 = df_scaled[df_ind, ]
-df_test2 = df_scaled[-df_ind, ]
-model_log_caret <- train(
-  Cover_Type ~ .,
-  data = df_train2,
-  method = "multinom",
-  trControl = trainControl(method = "cv", number = 2),
-  #  preProcess = c("pca"),
-  #  preProcess = c("center", "scale"),
-    trace = FALSE
-)
-
-pred_log_model_caret <- predict(model_log_caret, df_test2)
-con_mat_caret <- table(df_test2$Cover_Type, pred_log_model_caret)
-con_mat_caret
-#calculate accuracy
-accuracy_log2 <- sum(diag(con_mat_caret))/sum(con_mat_caret)
-print(paste('accuracy = ', accuracy_log))
-
-#calculate f1 score
-precision2 = matrix(NA, nrow=7)
-recall2 = matrix(NA, nrow = 7)
-for (i in 1:7) {
-  precision2[i] <- round(con_mat_caret[i,i]/colSums(con_mat_caret)[i],3)
-  recall2[i] <- round(con_mat_caret[i,i]/rowSums(con_mat_caret)[i],3)
-}
-
-f1_caret = 2 * (precision2 * recall2) / (precision2 + recall2)
-
-print('f1 scores of all classes')
-print(f1_caret)
-
-print(paste('average f1 score of all classes', round(mean(f1_caret),2)))
 
 ```
 
 * Fitting decision tree model
 ```{r decision_tree}
 library(rpart)
+library(Metrics)
 n <- nrow(df)
 n_train <- round(0.8 * n)
 train_ind <- sample(1:n, n_train)
@@ -422,30 +355,42 @@ pred_tree <- predict(model_tree, df_test_tree, type = "class")
 con_mat_tree <- confusionMatrix(pred_tree, df_test_tree$Cover_Type)
 con_mat_tree
 ```
-
-```{r bagging_tree}
-library(ipred)
-model_bag <- bagging(Cover_Type ~ ., data = df_train_tree)
+###Train a random forest model
+```{r model_random_forest}
+library(caret)
+set.seed(42)
+model_ran <- train(Cover_Type ~ ., tuneLength = 1, data = df_train, method = 'ranger',
+                   trControl=trainControl(method = 'cv', number = 2, verboseIter = TRUE)) 
+model_ran
 ```
+
+### Make a prediction
+```{r predict_forest}
+pred_ran <- predict(model_ran, df_test)
+con_mat_ran <- confusionMatrix(pred_ran, df_test$Cover_Type)
+print(con_mat_ran) 
+```
+
+
 
 ## Results
 1. Describe your model results
 
-accuracy = numbers of correct prediction/numbers of total observations
-
 2. (OPTIONAL) If more than 1 model was developed, please explain which model should be chosen and why.
 
 3. If more time were provided, what other strategies would you pursue? Why?
+
+### Multinomial Logistic Regression
+* The MLR model yielded acccuracy of 
++ accuracy = numbers of correct predictions/number of total data points
+
+```{r print_con_mat}
+print(con_mat)
+```
+
+### Random Forest
 * Random Forest Model
 + Improve accuracy of decision tree model by fitting many trees
-+ Fit each one to a boostrap sample you the data, called boostrap aggregation or bagging
-+ Randomly sample columns at each split
++ Fit each one to a boostrap sample of the data, called boostrap aggregation or bagging
++ Randomly sample columns at each split 
 
-```{r model_random_forest}
-library(caret)
-#library(mlbench)
-set.seed(42)
-model_ran <- train(Cover_Type ~ ., tuneLength = 1, data = df_train, method = 'ranger',
-                   trControl=trainControl(method = 'cv', number = 2, verboseIter = TRUE)) 
-
-```
