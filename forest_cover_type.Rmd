@@ -342,22 +342,24 @@ print(con_mat)
 
 
 ###Train a random forest model
-```{r model_random_forest}
-library(caret)
-set.seed(42)
-model_ran <- train(Cover_Type ~ ., tuneLength = 1, data = df_train, method = 'ranger',
-                   trControl=trainControl(method = 'cv', number = 2, verboseIter = TRUE)) 
-model_ran
+```{r model_forest3}
+set.seed(64)
+tunegrid <- expand.grid(.mtry=14, 
+                        .splitrule="gini",
+                        .min.node.size=1)
+model_ran3 <- train(Cover_Type ~ ., tuneLength = 1, data = df_train, method = 'ranger', 
+                    tuneGrid=tunegrid,
+                    #                    num.trees = 500,
+                    trControl=trainControl(method = 'cv', number = 2, verboseIter = TRUE)) 
+print(model_ran3)
 ```
 
 ### Make a prediction
-```{r predict_forest}
-pred_ran <- predict(model_ran, df_test)
-con_mat_ran <- confusionMatrix(pred_ran, df_test$Cover_Type)
-print(con_mat_ran) 
+```{r predict_forest3}
+pred_ran3 <- predict(model_ran3, df_test)
+con_mat_ran3 <- confusionMatrix(pred_ran3, df_test$Cover_Type)
+print(con_mat_ran3) 
 ```
-
-
 
 ## Results
 1. Describe your model results

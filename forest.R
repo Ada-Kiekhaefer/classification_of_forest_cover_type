@@ -339,8 +339,24 @@ model_ran <- train(Cover_Type ~ ., tuneLength = 1, data = df_scaled, method = 'r
                    trControl=trainControl(method = 'cv', number = 2, verboseIter = TRUE)) 
 
 
-# Train a random forest model ---------------------------------------------
 
+
+# Train a random forest model ---------------------------------------------
+###Train a random forest model
+#```{r model_random_forest}
+library(caret)
+set.seed(42)
+model_ran <- train(Cover_Type ~ ., tuneLength = 1, data = df_train, method = 'ranger',
+                   trControl=trainControl(method = 'cv', number = 2, verboseIter = TRUE)) 
+model_ran
+#```
+
+### Make a prediction
+#```{r predict_forest}
+pred_ran <- predict(model_ran, df_test)
+con_mat_ran <- confusionMatrix(pred_ran, df_test$Cover_Type)
+print(con_mat_ran) 
+#```
 #```{r model_forest2}
 set.seed(64)
 tunegrid <- expand.grid(.mtry=8, 
@@ -367,7 +383,7 @@ model_ran3 <- train(Cover_Type ~ ., tuneLength = 1, data = df_train, method = 'r
 print(model_ran3)
 #```
 
-#```{r predict_forest}
+#```{r predict_forest3}
 pred_ran3 <- predict(model_ran3, df_test)
 con_mat_ran3 <- confusionMatrix(pred_ran3, df_test$Cover_Type)
 print(con_mat_ran3) 
@@ -377,6 +393,6 @@ print(con_mat_ran3)
 
 # Results -----------------------------------------------------------------
 
-+ accuracy: numbers of correct predictions/number of total data points
-+ sensitivity (true positive rate or recall): measures the proportion of actual positives that are correctly identified
-+specificity (true negative rate): measures the proportion of actual negatives that are correctly identified
+#+ accuracy: numbers of correct predictions/number of total data points
+#+ sensitivity (true positive rate or recall): measures the proportion of actual positives that are correctly identified
+#+specificity (true negative rate): measures the proportion of actual negatives that are correctly identified
